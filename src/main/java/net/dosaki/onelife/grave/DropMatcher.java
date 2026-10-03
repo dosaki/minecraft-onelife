@@ -23,8 +23,22 @@ public final class DropMatcher {
      */
     public static <T> int[] take(List<? extends T> slots, int[] slotAmounts, List<? extends T> drops,
             int[] dropAmounts, BiPredicate<? super T, ? super T> similar) {
-        if (slots.size() != slotAmounts.length || drops.size() != dropAmounts.length) {
-            throw new IllegalArgumentException("items and amounts must have the same length");
+        boolean[] eligible = new boolean[drops.size()];
+        java.util.Arrays.fill(eligible, true);
+        return take(slots, slotAmounts, drops, dropAmounts, eligible, similar);
+    }
+
+    /**
+     * Like {@link #take(List, int[], List, int[], BiPredicate)}, but only drops marked eligible may satisfy slots.
+     * Ineligible drops (e.g. added by another plugin) are never consumed and keep their full amount.
+     *
+     * @param eligible whether each drop may be consumed, parallel to {@code drops}
+     */
+    public static <T> int[] take(List<? extends T> slots, int[] slotAmounts, List<? extends T> drops,
+            int[] dropAmounts, boolean[] eligible, BiPredicate<? super T, ? super T> similar) {
+        if (slots.size() != slotAmounts.length || drops.size() != dropAmounts.length
+                || drops.size() != eligible.length) {
+            throw new IllegalArgumentException("items, amounts and eligibility must have the same length");
         }
         int[] taken = new int[slots.size()];
         for (int i = 0; i < taken.length; i++) {
@@ -32,7 +46,7 @@ public final class DropMatcher {
             int want = slotAmounts[i];
             if (slot == null || want <= 0) continue;
             for (int d = 0; d < dropAmounts.length && want > 0; d++) {
-                if (dropAmounts[d] <= 0 || !similar.test(slot, drops.get(d))) continue;
+                if (!eligible[d] || dropAmounts[d] <= 0 || !similar.test(slot, drops.get(d))) continue;
                 int n = Math.min(want, dropAmounts[d]);
                 dropAmounts[d] -= n;
                 want -= n;

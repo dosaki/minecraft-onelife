@@ -43,14 +43,33 @@ public final class GraveViewer implements Listener {
             viewer.sendMessage(Component.text("This gravestone is too worn to read.", NamedTextColor.GRAY));
             return;
         }
-        Holder holder = open.computeIfAbsent(data.get().graveId(), id -> new Holder(meta, data.get()));
-        viewer.openInventory(holder.getInventory());
+        UUID graveId = data.get().graveId();
+        Holder existing = open.get(graveId);
+        if (existing != null && (existing.getInventory().getViewers().isEmpty() || !existing.entityResolves())) {
+            retire(existing, "stale grave window replaced");
+            existing = null;
+        }
+        Holder holder = existing != null ? existing : new Holder(meta, data.get());
+        open.put(graveId, holder);
+        if (viewer.openInventory(holder.getInventory()) == null && holder.getInventory().getViewers().isEmpty()) {
+            holder.retired = true;
+            open.remove(graveId, holder);
+        }
+    }
+
+    /** Retires a holder without flushing and closes its viewers. Used when its grave can no longer be resolved. */
+    private void retire(Holder holder, String reason) {
+        holder.retired = true;
+        open.remove(holder.data.graveId(), holder);
+        for (HumanEntity v : new ArrayList<>(holder.getInventory().getViewers())) v.closeInventory();
+        if (reason != null) plugin.getLogger().warning("Grave " + holder.data.graveId() + ": " + reason);
     }
 
     public void closeAll(UUID graveId) {
         Holder holder = open.remove(graveId);
         if (holder == null) return;
         holder.flush();
+        holder.retired = true;
         for (HumanEntity viewer : new ArrayList<>(holder.getInventory().getViewers())) viewer.closeInventory();
     }
 
@@ -58,15 +77,16 @@ public final class GraveViewer implements Listener {
     @EventHandler
     public void onClick(InventoryClickEvent event) {
         if (!(event.getView().getTopInventory().getHolder() instanceof Holder holder)) return;
+        boolean wasCancelled = event.isCancelled();
         event.setCancelled(true);
         try {
             int rawSlot = event.getRawSlot();
             boolean clickedTop = rawSlot >= 0 && rawSlot < SlotLayout.WINDOW_SIZE;
             boolean allowed = ViewerPolicy.allowClick(holder.data.mode(), holder.readable, event.getAction(),
                     clickedTop, rawSlot, hotbarTargetEmpty(event));
-            if (!allowed) return;
+            if (!allowed || wasCancelled) return;
             event.setCancelled(false);
-            if (clickedTop) Bukkit.getScheduler().runTask(plugin, holder::flush);
+            if (clickedTop) Bukkit.getScheduler().runTask(plugin, () -> flush(holder));
         } catch (RuntimeException e) {
             event.setCancelled(true);
             plugin.getLogger().log(Level.WARNING, "Grave click rejected after an error", e);
@@ -76,9 +96,10 @@ public final class GraveViewer implements Listener {
     @EventHandler
     public void onDrag(InventoryDragEvent event) {
         if (!(event.getView().getTopInventory().getHolder() instanceof Holder holder)) return;
+        boolean wasCancelled = event.isCancelled();
         event.setCancelled(true);
         try {
-            if (ViewerPolicy.allowDrag(holder.data.mode(), holder.readable, event.getRawSlots())) {
+            if (!wasCancelled && ViewerPolicy.allowDrag(holder.data.mode(), holder.readable, event.getRawSlots())) {
                 event.setCancelled(false);
             }
         } catch (RuntimeException e) {
@@ -90,8 +111,17 @@ public final class GraveViewer implements Listener {
     @EventHandler
     public void onClose(InventoryCloseEvent event) {
         if (!(event.getInventory().getHolder() instanceof Holder holder)) return;
-        holder.flush();
-        if (event.getInventory().getViewers().size() <= 1) open.remove(holder.data.graveId(), holder);
+        flush(holder);
+        if (event.getInventory().getViewers().size() <= 1) {
+            holder.retired = true;
+            open.remove(holder.data.graveId(), holder);
+        }
+    }
+
+    /** Flushes a holder; if its grave can't be resolved, fails closed by retiring it and closing its viewers. */
+    private void flush(Holder holder) {
+        if (holder.retired) return;
+        if (!holder.flush()) retire(holder, "grave entity is gone or unloaded, window closed without saving");
     }
 
     private static boolean hotbarTargetEmpty(InventoryClickEvent event) {
@@ -107,13 +137,14 @@ public final class GraveViewer implements Listener {
     }
 
     private static final class Holder implements InventoryHolder {
-        private final Entity meta;
+        private final UUID metaId;
+        volatile boolean retired;
         private final Inventory inventory;
         private final boolean readable;
         private GraveData data;
 
         Holder(Entity meta, GraveData data) {
-            this.meta = meta;
+            this.metaId = meta.getUniqueId();
             this.data = data;
             Component title = Component.text(data.ownerName() + "'s Grave");
             this.inventory = Bukkit.createInventory(this, SlotLayout.WINDOW_SIZE, title);
@@ -132,8 +163,16 @@ public final class GraveViewer implements Listener {
         }
 
         /** Writes a lootable grave's window back to the furniture. One Life and unreadable graves never change. */
-        void flush() {
-            if (!readable || data.mode() == GraveData.Mode.ONE_LIFE || !meta.isValid()) return;
+        boolean entityResolves() {
+            Entity e = Bukkit.getEntity(metaId);
+            return e != null && e.isValid();
+        }
+
+        /** Returns false only when a write was needed but the entity could not be resolved. */
+        boolean flush() {
+            if (retired || !readable || data.mode() == GraveData.Mode.ONE_LIFE) return true;
+            Entity meta = Bukkit.getEntity(metaId);
+            if (meta == null || !meta.isValid()) return false;
             ItemStack[] slots = ItemCodec.emptySlots();
             for (int g = 0; g < SlotLayout.GRAVE_SLOTS; g++) {
                 ItemStack item = inventory.getItem(SlotLayout.windowSlot(g));
@@ -141,6 +180,7 @@ public final class GraveViewer implements Listener {
             }
             data = data.withItems(ItemCodec.encode(slots));
             GraveStore.write(meta, data);
+            return true;
         }
 
         @Override

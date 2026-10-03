@@ -60,7 +60,11 @@ public final class DeathListener implements Listener {
         this.lastMessages = lastMessages;
     }
 
-    /** Snapshots the vanilla drop entries so plugin-added drops can be told apart later. */
+    /**
+     * Snapshots the drop entries so plugin-added drops can be told apart later. Best effort: another plugin's LOWEST
+     * listener may run before this one (same-priority order follows registration), and its additions would then
+     * count as original. Bukkit offers no earlier hook; no plugin on our server adds death drops.
+     */
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void recordOriginalDrops(PlayerDeathEvent event) {
         Set<ItemStack> originals = Collections.newSetFromMap(new IdentityHashMap<>());

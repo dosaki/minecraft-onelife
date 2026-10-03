@@ -38,7 +38,7 @@ public final class DropMatcher {
             int[] dropAmounts, boolean[] eligible, BiPredicate<? super T, ? super T> similar) {
         if (slots.size() != slotAmounts.length || drops.size() != dropAmounts.length
                 || drops.size() != eligible.length) {
-            throw new IllegalArgumentException("items and amounts must have the same length");
+            throw new IllegalArgumentException("items, amounts and eligibility must have the same length");
         }
         int[] taken = new int[slots.size()];
         for (int i = 0; i < taken.length; i++) {

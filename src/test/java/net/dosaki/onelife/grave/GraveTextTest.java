@@ -86,8 +86,18 @@ class GraveTextTest {
     @Test
     void causeWithoutNameLeavesOtherTextAlone() {
         assertEquals("Zombie killed Steve", GraveText.causeWithoutName("Zombie killed Steve", "Steve"));
-        assertEquals("Dosaki was slain", GraveText.causeWithoutName("Dosaki was slain", "Dos"));
+        assertEquals("Stevenson was slain", GraveText.causeWithoutName("Stevenson was slain", "Steve"));
         assertEquals("Steve", GraveText.causeWithoutName("Steve", "Steve"));
+    }
+
+    @Test
+    void causeWithoutNameEdgeCases() {
+        assertEquals("Was slain", GraveText.causeWithoutName("A.B was slain", "A.B"));
+        assertEquals("Was slain", GraveText.causeWithoutName("A+B was slain", "A+B"));
+        assertEquals("AxB was slain", GraveText.causeWithoutName("AxB was slain", "A.B"));
+        assertEquals("Steve", GraveText.causeWithoutName("Steve", "Steve"));
+        assertEquals("Fell off a ladder", GraveText.causeWithoutName("Steve    fell off a ladder  ", "Steve"));
+        assertEquals("Étrange", GraveText.causeWithoutName("Steve étrange", "Steve"));
     }
 
     @Test

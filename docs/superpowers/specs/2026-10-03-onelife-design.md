@@ -104,7 +104,8 @@ Shown as floating text above the placed grave and as the item's tooltip:
 
 Long text wraps (floating text) or is split into lines (tooltip). The cause is rendered to plain English on the
 server at death time (vanilla translations, server language), the owner's name prefix is removed and the first letter
-capitalised; it is therefore English for everyone. Graves made before this change keep a translatable cause, which
+capitalised; only the player's plain name is stripped, so a team prefix or nickname plugin leaves the name in the
+cause. It is English for everyone. Graves made before this change keep a translatable cause, which
 still displays.
 
 The death number is `DEATHS statistic + 1` at death time (vanilla awards the statistic after the death event).

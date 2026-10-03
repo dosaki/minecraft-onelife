@@ -1,0 +1,11 @@
+name: OneLife
+version: '${version}'
+main: net.dosaki.onelife.OneLifePlugin
+api-version: '26.3'
+description: One Life gravestones — memorial graves that hold your items, cause of death and last words.
+dependencies:
+  server:
+    CraftEngine:
+      load: BEFORE
+      required: true
+      join-classpath: true

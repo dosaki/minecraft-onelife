@@ -1,0 +1,8 @@
+# Largest encoded size of a grave's items, in bytes. Over this, shulker boxes (largest first) spill on the ground.
+size-cap-bytes: 524288
+# How far (in blocks) to look for a free space for a grave.
+search-radius: 3
+# Share of the stored XP given to whoever breaks a grave for the first time.
+xp-fraction: 0.5
+# Run "/ce reload pack" once after CraftEngine's first load, so the resource pack includes the gravestone.
+regenerate-pack-on-start: true

@@ -61,4 +61,23 @@ class DropMatcherTest {
         assertArrayEquals(new int[] {6}, taken);
         assertArrayEquals(new int[] {0, 0, 3}, drops);
     }
+
+    @Test
+    void ineligibleIdenticalDropIsNotConsumed() {
+        int[] drops = {1, 1};
+        // Second "diamond" was added by another plugin; the slot must be satisfied by the original only.
+        int[] taken = DropMatcher.take(List.of("diamond", "diamond"), new int[] {1, 1}, List.of("diamond", "diamond"),
+                drops, new boolean[] {true, false}, String::equals);
+        assertArrayEquals(new int[] {1, 0}, taken);
+        assertArrayEquals(new int[] {0, 1}, drops);
+    }
+
+    @Test
+    void reducedOriginalDropMatchesOnlyItsRemainingAmount() {
+        int[] drops = {2, 5};
+        int[] taken = DropMatcher.take(List.of("dirt"), new int[] {10}, List.of("dirt", "dirt"),
+                drops, new boolean[] {true, false}, String::equals);
+        assertArrayEquals(new int[] {2}, taken);
+        assertArrayEquals(new int[] {0, 5}, drops);
+    }
 }

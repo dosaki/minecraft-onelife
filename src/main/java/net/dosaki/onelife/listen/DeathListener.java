@@ -1,10 +1,14 @@
 package net.dosaki.onelife.listen;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.OptionalInt;
 import java.util.Set;
 import java.util.UUID;
+import java.util.WeakHashMap;
 import java.util.logging.Level;
 import net.dosaki.onelife.Settings;
 import net.dosaki.onelife.craft.GraveItems;
@@ -43,6 +47,12 @@ public final class DeathListener implements Listener {
     private final Settings settings;
     private final LastMessageTracker lastMessages;
     private int framingOverhead = -1;
+    /**
+     * The drop entries (by identity) each death event had before any plugin at a later priority touched them.
+     * Weak keys so an entry cannot leak if the HIGHEST handler never runs for an event.
+     */
+    private final Map<PlayerDeathEvent, Set<ItemStack>> originalDrops =
+            Collections.synchronizedMap(new WeakHashMap<>());
 
     public DeathListener(Plugin plugin, Settings settings, LastMessageTracker lastMessages) {
         this.plugin = plugin;
@@ -50,8 +60,19 @@ public final class DeathListener implements Listener {
         this.lastMessages = lastMessages;
     }
 
-    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    /** Snapshots the vanilla drop entries so plugin-added drops can be told apart later. */
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    public void recordOriginalDrops(PlayerDeathEvent event) {
+        Set<ItemStack> originals = Collections.newSetFromMap(new IdentityHashMap<>());
+        originals.addAll(event.getDrops());
+        originalDrops.put(event, originals);
+    }
+
+    // HIGHEST so keep-items/keep-level plugins have already changed drops and keepLevel before we read them.
+    // Not MONITOR: we modify the event.
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onDeath(PlayerDeathEvent event) {
+        Set<ItemStack> originals = originalDrops.remove(event);
         Player player = event.getPlayer();
         ModeState state = PlayerModeStore.get(player);
         PlayerModeStore.set(player, state.afterDeath());
@@ -81,7 +102,11 @@ public final class DeathListener implements Listener {
                 slotItems.add(skip ? null : item);
                 slotAmounts[i] = skip ? 0 : item.getAmount();
             }
-            int[] taken = DropMatcher.take(slotItems, slotAmounts, drops, dropLeft, ItemStack::isSimilar);
+            // Only entries present at LOWEST may fill grave slots; entries other plugins added are new
+            // instances and stay leftovers. If the snapshot is missing, fall back to treating all drops as original.
+            boolean[] eligible = new boolean[dropLeft.length];
+            for (int d = 0; d < eligible.length; d++) eligible[d] = originals == null || originals.contains(drops.get(d));
+            int[] taken = DropMatcher.take(slotItems, slotAmounts, drops, dropLeft, eligible, ItemStack::isSimilar);
 
             ItemStack[] stored = ItemCodec.emptySlots();
             for (int i = 0; i < slotCount; i++) {

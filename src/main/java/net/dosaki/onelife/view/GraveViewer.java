@@ -51,6 +51,8 @@ public final class GraveViewer implements Listener {
             existing = null;
         }
         Holder holder = existing != null ? existing : new Holder(meta, data.get());
+        // Re-opening would close and retire this holder, then reopen the same inventory unretired but unflushed.
+        if (viewer.getOpenInventory().getTopInventory() == holder.getInventory()) return;
         open.put(graveId, holder);
         if (viewer.openInventory(holder.getInventory()) == null && holder.getInventory().getViewers().isEmpty()) {
             holder.retired = true;

@@ -14,6 +14,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickCallback;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
+import org.bukkit.Statistic;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -48,6 +49,7 @@ public final class OneLifePrompt implements Listener {
     }
 
     public void show(Player player) {
+        int deaths = player.getStatistic(Statistic.DEATHS); // an answer is only valid for this life
         ClickCallback.Options once = ClickCallback.Options.builder().uses(1).lifetime(Duration.ofHours(1)).build();
         Dialog dialog = Dialog.create(builder -> builder.empty()
                 .base(DialogBase.builder(Component.text("One Life?"))
@@ -60,19 +62,19 @@ public final class OneLifePrompt implements Listener {
                         .build())
                 .type(DialogType.confirmation(
                         ActionButton.builder(Component.text("One Life", NamedTextColor.DARK_RED))
-                                .action(DialogAction.customClick((response, audience) -> choose(audience, true), once))
+                                .action(DialogAction.customClick((response, audience) -> choose(audience, true, deaths), once))
                                 .build(),
                         ActionButton.builder(Component.text("Not this life"))
-                                .action(DialogAction.customClick((response, audience) -> choose(audience, false), once))
+                                .action(DialogAction.customClick((response, audience) -> choose(audience, false, deaths), once))
                                 .build())));
         player.showDialog(dialog);
     }
 
-    private void choose(Audience audience, boolean oneLife) {
+    private void choose(Audience audience, boolean oneLife, int deaths) {
         if (!(audience instanceof Player player)) return;
         Bukkit.getScheduler().runTask(plugin, () -> {
-            // A stale click (dialog answered after dying or leaving) must not change the mode.
-            if (!player.isOnline() || player.isDead()) return;
+            // A stale click (answered after dying, leaving or respawning into a later life) must not change the mode.
+            if (!player.isOnline() || player.isDead() || player.getStatistic(Statistic.DEATHS) != deaths) return;
             ModeState state = PlayerModeStore.get(player).choose(oneLife);
             PlayerModeStore.set(player, state);
             player.sendMessage(state.enabled()

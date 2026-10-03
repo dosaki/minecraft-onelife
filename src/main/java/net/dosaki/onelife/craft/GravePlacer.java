@@ -12,6 +12,7 @@ import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.TileState;
+import org.bukkit.block.data.BlockData;
 import org.bukkit.util.BoundingBox;
 import org.jspecify.annotations.Nullable;
 
@@ -62,11 +63,22 @@ public final class GravePlacer {
 
     /** Places a grave in {@code block}, replacing it if it isn't free. Null if CraftEngine refused. */
     public static @Nullable BukkitFurniture place(Block block, float yaw, byte[] raw, @Nullable GraveData data) {
-        if (!block.isEmpty() && !block.isLiquid()) block.setType(Material.AIR);
+        // Remember what the fallback clears so a failed placement doesn't leave the terrain deleted.
+        BlockData saved = block.getBlockData();
+        if (!block.isEmpty() && !block.isLiquid()) block.setType(Material.AIR, false);
         Location at = block.getLocation().add(0.5, 0, 0.5);
         at.setYaw(Math.round(yaw / 90f) * 90f + 180f); // face the player who died
-        BukkitFurniture furniture = CraftEngineFurniture.place(at, GraveItems.FURNITURE, VARIANT, false);
-        if (furniture == null) return null;
+        BukkitFurniture furniture;
+        try {
+            furniture = CraftEngineFurniture.place(at, GraveItems.FURNITURE, VARIANT, false);
+        } catch (RuntimeException e) {
+            block.setBlockData(saved, false);
+            throw e;
+        }
+        if (furniture == null) {
+            block.setBlockData(saved, false);
+            return null;
+        }
         GraveStore.writeRaw(furniture.bukkitEntity(), raw);
         if (data != null) {
             // The grave exists now; its text is best-effort (HologramRestorer recreates it on chunk load).

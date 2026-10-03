@@ -1,6 +1,7 @@
 package net.dosaki.onelife.grave;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.Set;
@@ -11,6 +12,13 @@ class SizeCapTest {
     @Test
     void nothingSpillsUnderTheLimit() {
         assertEquals(Set.of(), SizeCap.spill(List.of(new SizeCap.Slot(0, 10, false), new SizeCap.Slot(1, 20, true)), 30));
+    }
+
+    @Test
+    void budgetReservesFramingOrIsEmptyWhenCapTooSmall() {
+        assertEquals(900, SizeCap.budget(1000, 100).getAsInt());
+        assertEquals(0, SizeCap.budget(100, 100).getAsInt());
+        assertTrue(SizeCap.budget(99, 100).isEmpty());
     }
 
     @Test

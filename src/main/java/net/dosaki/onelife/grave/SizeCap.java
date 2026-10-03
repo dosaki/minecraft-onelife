@@ -3,6 +3,7 @@ package net.dosaki.onelife.grave;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.OptionalInt;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -18,6 +19,11 @@ public final class SizeCap {
             .thenComparingInt(Slot::index);
 
     private SizeCap() {}
+
+    /** The item budget left after reserving {@code overhead} bytes of framing, empty if the cap can't hold it. */
+    public static OptionalInt budget(int cap, int overhead) {
+        return cap < overhead ? OptionalInt.empty() : OptionalInt.of(cap - overhead);
+    }
 
     /** Indices to remove so the remaining total is at most {@code limit}. */
     public static Set<Integer> spill(List<Slot> slots, int limit) {

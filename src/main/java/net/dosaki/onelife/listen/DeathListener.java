@@ -2,6 +2,7 @@ package net.dosaki.onelife.listen;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.OptionalInt;
 import java.util.Set;
 import java.util.UUID;
 import java.util.logging.Level;
@@ -40,6 +41,7 @@ public final class DeathListener implements Listener {
     private final Plugin plugin;
     private final Settings settings;
     private final LastMessageTracker lastMessages;
+    private int framingOverhead = -1;
 
     public DeathListener(Plugin plugin, Settings settings, LastMessageTracker lastMessages) {
         this.plugin = plugin;
@@ -78,7 +80,14 @@ public final class DeathListener implements Listener {
                 if (stored[i].isEmpty()) continue;
                 sizes.add(new SizeCap.Slot(i, ItemCodec.size(stored[i]), Tag.SHULKER_BOXES.isTagged(stored[i].getType())));
             }
-            Set<Integer> spilled = SizeCap.spill(sizes, settings.sizeCapBytes());
+            // serializeItemsAsBytes also writes a header and framing for all 41 slots; reserve that.
+            OptionalInt budget = SizeCap.budget(settings.sizeCapBytes(), framingOverhead());
+            if (budget.isEmpty()) {
+                plugin.getLogger().warning("size-cap-bytes (" + settings.sizeCapBytes() + ") cannot hold even an "
+                        + "empty grave (" + framingOverhead() + " bytes); leaving vanilla drops for " + player.getName() + ".");
+                return;
+            }
+            Set<Integer> spilled = SizeCap.spill(sizes, budget.getAsInt());
             for (int i : spilled) {
                 spill.add(stored[i]);
                 stored[i] = ItemStack.empty();
@@ -122,6 +131,12 @@ public final class DeathListener implements Listener {
                 event.getDrops().add(item);
             }
         }
+    }
+
+    /** Encoded size of 41 empty slots: the framing that per-item sizes don't count. Measured once. */
+    private int framingOverhead() {
+        if (framingOverhead < 0) framingOverhead = ItemCodec.encode(ItemCodec.emptySlots()).length;
+        return framingOverhead;
     }
 
     /** The death message as plain English without the player's name; the serializer resolves vanilla keys. */

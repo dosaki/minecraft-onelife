@@ -67,8 +67,9 @@ Void deaths behave as vanilla (items lost to the void, no grave).
 
 ### 2.3 Looking inside (right-click)
 
-A 5-row window titled "<owner>'s Grave" shows the 41 stored slots in the player's layout (hotbar, main, armour,
-offhand).
+A 5-row window shows the 41 stored slots in the player's layout (hotbar, main, armour,
+offhand). The title is `One Life Grave - unable to loot` for a One Life grave and `Grave of <title>` (§2.6) for a
+lootable one; a grave whose contents can't be read keeps the title `<owner>'s Grave`.
 
 - **One Life:** every click, drag, number-key swap, double-click collect and shift-click is cancelled.
 - **Lootable:** items can be taken out; nothing can be put in (actions that would place into the grave are
@@ -95,13 +96,19 @@ floating text appears. A gravestone item with no grave data (e.g. from `/ce give
 
 Shown as floating text above the placed grave and as the item's tooltip:
 
-- `☠ <owner>` (item name: `<owner>'s Gravestone`)
-- the cause of death — the vanilla death message, e.g. "Steve was slain by Zombie"
+- `☠ <title>`, where `<title>` is `<owner>, the <ordinal>` (e.g. "Steve, the Third"; just `<owner>` when the death
+  number is unknown). The item name is `Grave of <title>`.
+- the cause of death in English without the player's name, e.g. "Was slain by Zombie"
 - the last chat message, in quotes, italic; omitted if the player never chatted
-- `One Life` or `Lootable`
+- tooltip only: `One Life` or `Lootable` (floating text omits it; the window title carries the mode)
 
-Long text wraps (floating text) or is split into lines (tooltip). The death message is kept as a translatable text
-component, so each player sees it in their own language.
+Long text wraps (floating text) or is split into lines (tooltip). The cause is rendered to plain English on the
+server at death time (vanilla translations, server language), the owner's name prefix is removed and the first letter
+capitalised; it is therefore English for everyone. Graves made before this change keep a translatable cause, which
+still displays.
+
+The death number is `DEATHS statistic + 1` at death time (vanilla awards the statistic after the death event).
+Ordinals are words up to Ninety-Ninth, then digits ("100th", "101st").
 
 ### 2.7 If the item is destroyed
 
@@ -156,8 +163,9 @@ fresh item built from the meta entity's current data.
 
 - Items: Paper's `ItemStack.serializeItemsAsBytes` / `deserializeItemsFromBytes` over a fixed 41-slot array (empty
   slots included). These bytes carry the Minecraft data version, so items upgrade when the server upgrades.
-- Cause: Adventure component as JSON.
-- Everything else: plain fields. A leading format version byte allows future changes.
+- Cause: Adventure component as JSON (a plain text component from format 2 on; older graves may hold a translatable one).
+- Everything else: plain fields. A leading format version byte allows future changes. Format 2 adds the death
+  number (int, 0 = unknown); format 1 still decodes, with death number 0.
 
 ### 4.3 Player data
 

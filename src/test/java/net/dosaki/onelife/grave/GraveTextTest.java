@@ -18,7 +18,12 @@ class GraveTextTest {
     private static final String CAUSE = "{\"translate\":\"death.attack.drown\",\"with\":[{\"text\":\"Steve\"}]}";
 
     private static GraveData grave(GraveData.Mode mode, String last) {
-        return new GraveData(UUID.randomUUID(), UUID.randomUUID(), "Steve", mode, CAUSE, last, 10, false, new byte[0]);
+        return grave(mode, last, 3);
+    }
+
+    private static GraveData grave(GraveData.Mode mode, String last, int deathNumber) {
+        return new GraveData(UUID.randomUUID(), UUID.randomUUID(), "Steve", mode, CAUSE, last, 10, false,
+                deathNumber, new byte[0]);
     }
 
     private static String plain(Component c) {
@@ -34,7 +39,7 @@ class GraveTextTest {
     @Test
     void badCauseJsonFallsBack() {
         GraveData d = new GraveData(UUID.randomUUID(), UUID.randomUUID(), "Steve", GraveData.Mode.LOOTABLE,
-                "{\"translate\":", null, 0, false, new byte[0]);
+                "{\"translate\":", null, 0, false, 0, new byte[0]);
         assertEquals("Died", plain(GraveText.cause(d)));
     }
 
@@ -42,16 +47,54 @@ class GraveTextTest {
     void hologramLines() {
         String text = plain(GraveText.hologram(grave(GraveData.Mode.ONE_LIFE, "see you")));
         List<String> lines = List.of(text.split("\n"));
-        assertEquals("☠ Steve", lines.get(0));
+        assertEquals(3, lines.size());
+        assertEquals("☠ Steve, the Third", lines.get(0));
         assertEquals("\"see you\"", lines.get(2));
-        assertEquals("One Life", lines.get(3));
     }
 
     @Test
-    void hologramOmitsMissingLastMessage() {
-        String text = plain(GraveText.hologram(grave(GraveData.Mode.LOOTABLE, null)));
-        assertEquals(3, text.split("\n").length);
-        assertTrue(text.endsWith("Lootable"));
+    void hologramHasNoModeLine() {
+        for (GraveData.Mode mode : GraveData.Mode.values()) {
+            String text = plain(GraveText.hologram(grave(mode, null)));
+            assertEquals(2, text.split("\n").length);
+            assertFalse(text.contains("One Life"));
+            assertFalse(text.contains("Lootable"));
+        }
+    }
+
+    @Test
+    void titleWithAndWithoutNumber() {
+        assertEquals("Steve, the Third", GraveText.title(grave(GraveData.Mode.ONE_LIFE, null, 3)));
+        assertEquals("Steve, the 101st", GraveText.title(grave(GraveData.Mode.ONE_LIFE, null, 101)));
+        assertEquals("Steve", GraveText.title(grave(GraveData.Mode.ONE_LIFE, null, 0)));
+    }
+
+    @Test
+    void windowTitleDependsOnMode() {
+        assertEquals("One Life Grave - unable to loot",
+                plain(GraveText.windowTitle(grave(GraveData.Mode.ONE_LIFE, null))));
+        assertEquals("Grave of Steve, the Third",
+                plain(GraveText.windowTitle(grave(GraveData.Mode.LOOTABLE, null))));
+    }
+
+    @Test
+    void causeWithoutNameStripsOwnerAndCapitalises() {
+        assertEquals("Was slain by Zombie", GraveText.causeWithoutName("Steve was slain by Zombie", "Steve"));
+        assertEquals("Tried to swim in lava", GraveText.causeWithoutName("  Steve tried to swim in lava ", "Steve"));
+    }
+
+    @Test
+    void causeWithoutNameLeavesOtherTextAlone() {
+        assertEquals("Zombie killed Steve", GraveText.causeWithoutName("Zombie killed Steve", "Steve"));
+        assertEquals("Dosaki was slain", GraveText.causeWithoutName("Dosaki was slain", "Dos"));
+        assertEquals("Steve", GraveText.causeWithoutName("Steve", "Steve"));
+    }
+
+    @Test
+    void causeWithoutNameDefaultsToDied() {
+        assertEquals("Died", GraveText.causeWithoutName(null, "Steve"));
+        assertEquals("Died", GraveText.causeWithoutName("   ", "Steve"));
+        assertEquals("Died", GraveText.causeWithoutName("", "Steve"));
     }
 
     @Test
@@ -62,7 +105,8 @@ class GraveTextTest {
 
     @Test
     void itemName() {
-        assertEquals("Steve's Gravestone", plain(GraveText.itemName(grave(GraveData.Mode.LOOTABLE, null))));
+        assertEquals("Grave of Steve, the Third", plain(GraveText.itemName(grave(GraveData.Mode.LOOTABLE, null))));
+        assertEquals("Grave of Steve", plain(GraveText.itemName(grave(GraveData.Mode.LOOTABLE, null, 0))));
     }
 
     @Test

@@ -9,6 +9,7 @@ import java.util.logging.Level;
 import net.dosaki.onelife.craft.GraveStore;
 import net.dosaki.onelife.craft.ItemCodec;
 import net.dosaki.onelife.grave.GraveData;
+import net.dosaki.onelife.grave.GraveText;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
@@ -159,10 +160,10 @@ public final class GraveViewer implements Listener {
         Holder(Entity meta, GraveData data) {
             this.metaId = meta.getUniqueId();
             this.data = data;
-            Component title = Component.text(data.ownerName() + "'s Grave");
-            this.inventory = Bukkit.createInventory(this, SlotLayout.WINDOW_SIZE, title);
             Optional<ItemStack[]> items = ItemCodec.decode(data.items());
             this.readable = items.isPresent();
+            Component title = readable ? GraveText.windowTitle(data) : Component.text(data.ownerName() + "'s Grave");
+            this.inventory = Bukkit.createInventory(this, SlotLayout.WINDOW_SIZE, title);
             if (readable) {
                 ItemStack[] slots = items.get();
                 for (int g = 0; g < SlotLayout.GRAVE_SLOTS; g++) inventory.setItem(SlotLayout.windowSlot(g), slots[g]);

@@ -16,6 +16,7 @@ import org.jspecify.annotations.Nullable;
  * and on the furniture's meta entity (placed).
  *
  * @param causeJson the death message as an Adventure component in JSON
+ * @param deathNumber which death of this player this grave is (1 = first); 0 when unknown (format 1 graves)
  * @param items     the 41 inventory slots, encoded by {@code ItemCodec}; opaque here
  */
 public record GraveData(
@@ -27,9 +28,10 @@ public record GraveData(
         @Nullable String lastMessage,
         int xp,
         boolean mined,
+        int deathNumber,
         byte[] items) {
 
-    private static final byte FORMAT = 1;
+    private static final byte FORMAT = 2;
 
     public enum Mode { ONE_LIFE, LOOTABLE }
 
@@ -41,6 +43,7 @@ public record GraveData(
         Objects.requireNonNull(causeJson, "causeJson");
         Objects.requireNonNull(items, "items");
         if (xp < 0) throw new IllegalArgumentException("xp must be >= 0, was " + xp);
+        if (deathNumber < 0) throw new IllegalArgumentException("deathNumber must be >= 0, was " + deathNumber);
         items = items.clone();
     }
 
@@ -50,11 +53,11 @@ public record GraveData(
     }
 
     public GraveData withItems(byte[] newItems) {
-        return new GraveData(graveId, ownerId, ownerName, mode, causeJson, lastMessage, xp, mined, newItems);
+        return new GraveData(graveId, ownerId, ownerName, mode, causeJson, lastMessage, xp, mined, deathNumber, newItems);
     }
 
     public GraveData withMined() {
-        return new GraveData(graveId, ownerId, ownerName, mode, causeJson, lastMessage, xp, true, items);
+        return new GraveData(graveId, ownerId, ownerName, mode, causeJson, lastMessage, xp, true, deathNumber, items);
     }
 
     /** XP paid to whoever breaks the grave first, rounded down. */
@@ -75,6 +78,7 @@ public record GraveData(
             if (lastMessage != null) out.writeUTF(lastMessage);
             out.writeInt(xp);
             out.writeBoolean(mined);
+            out.writeInt(deathNumber);
             out.writeInt(items.length);
             out.write(items);
         } catch (IOException e) {
@@ -86,7 +90,7 @@ public record GraveData(
     public static GraveData decode(byte[] bytes) {
         try (DataInputStream in = new DataInputStream(new ByteArrayInputStream(bytes))) {
             byte format = in.readByte();
-            if (format != FORMAT) throw new GraveDataException("unknown grave format " + format);
+            if (format != 1 && format != FORMAT) throw new GraveDataException("unknown grave format " + format);
             UUID graveId = readUuid(in);
             UUID ownerId = readUuid(in);
             String ownerName = in.readUTF();
@@ -96,12 +100,13 @@ public record GraveData(
             String lastMessage = in.readBoolean() ? in.readUTF() : null;
             int xp = in.readInt();
             boolean mined = in.readBoolean();
+            int deathNumber = format >= 2 ? in.readInt() : 0;
             int length = in.readInt();
             if (length < 0 || length > in.available()) throw new GraveDataException("bad items length " + length);
             byte[] items = in.readNBytes(length);
             if (in.available() != 0) throw new GraveDataException("trailing bytes after grave data");
             return new GraveData(graveId, ownerId, ownerName, Mode.values()[modeIndex], causeJson, lastMessage,
-                    xp, mined, items);
+                    xp, mined, deathNumber, items);
         } catch (IOException | IllegalArgumentException e) {
             throw new GraveDataException("corrupt grave data", e);
         }
@@ -121,18 +126,18 @@ public record GraveData(
         return o instanceof GraveData g
                 && graveId.equals(g.graveId) && ownerId.equals(g.ownerId) && ownerName.equals(g.ownerName)
                 && mode == g.mode && causeJson.equals(g.causeJson) && Objects.equals(lastMessage, g.lastMessage)
-                && xp == g.xp && mined == g.mined && Arrays.equals(items, g.items);
+                && xp == g.xp && mined == g.mined && deathNumber == g.deathNumber && Arrays.equals(items, g.items);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(graveId, ownerId, ownerName, mode, causeJson, lastMessage, xp, mined)
+        return Objects.hash(graveId, ownerId, ownerName, mode, causeJson, lastMessage, xp, mined, deathNumber)
                 * 31 + Arrays.hashCode(items);
     }
 
     @Override
     public String toString() {
         return "GraveData[" + graveId + ", owner=" + ownerName + ", mode=" + mode + ", xp=" + xp
-                + ", mined=" + mined + ", items=" + items.length + " bytes]";
+                + ", mined=" + mined + ", death=" + deathNumber + ", items=" + items.length + " bytes]";
     }
 }

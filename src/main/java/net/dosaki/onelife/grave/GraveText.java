@@ -2,11 +2,13 @@ package net.dosaki.onelife.grave;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.JoinConfiguration;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
+import org.jspecify.annotations.Nullable;
 
 /** The words on a grave: floating text, item name and tooltip. */
 public final class GraveText {
@@ -25,15 +27,36 @@ public final class GraveText {
 
     public static Component hologram(GraveData d) {
         List<Component> lines = new ArrayList<>();
-        lines.add(title(d));
+        lines.add(titleLine(d));
         lines.add(cause(d).colorIfAbsent(NamedTextColor.WHITE));
         if (d.lastMessage() != null) lines.add(quote(d.lastMessage()));
-        lines.add(modeLabel(d));
         return Component.join(JoinConfiguration.newlines(), lines);
     }
 
     public static Component itemName(GraveData d) {
-        return Component.text(d.ownerName() + "'s Gravestone");
+        return Component.text("Grave of " + title(d));
+    }
+
+    /** Title of the grave's window: One Life graves say so, lootable ones name their owner. */
+    public static Component windowTitle(GraveData d) {
+        return d.mode() == GraveData.Mode.ONE_LIFE
+                ? Component.text("One Life Grave - unable to loot")
+                : Component.text("Grave of " + title(d));
+    }
+
+    /** "Steve, the Third", or just "Steve" when the death number is unknown. */
+    public static String title(GraveData d) {
+        return d.deathNumber() > 0 ? d.ownerName() + ", the " + Ordinals.of(d.deathNumber()) : d.ownerName();
+    }
+
+    /** Turns "Steve was slain by Zombie" into "Was slain by Zombie"; text that doesn't start with the name is kept. */
+    public static String causeWithoutName(@Nullable String plain, String ownerName) {
+        String text = plain == null ? "" : plain.strip();
+        if (text.isEmpty()) return "Died";
+        if (!text.startsWith(ownerName + " ")) return text;
+        String rest = text.substring(ownerName.length()).strip();
+        if (rest.isEmpty()) return text;
+        return rest.substring(0, 1).toUpperCase(Locale.ROOT) + rest.substring(1);
     }
 
     public static List<Component> lore(GraveData d) {
@@ -76,8 +99,8 @@ public final class GraveText {
         return lines;
     }
 
-    private static Component title(GraveData d) {
-        return Component.text("☠ " + d.ownerName(), NamedTextColor.GRAY).decorate(TextDecoration.BOLD);
+    private static Component titleLine(GraveData d) {
+        return Component.text("☠ " + title(d), NamedTextColor.GRAY).decorate(TextDecoration.BOLD);
     }
 
     private static Component quote(String message) {

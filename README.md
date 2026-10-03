@@ -3,7 +3,8 @@
 A Paper plugin that replaces death drops with a gravestone.
 
 - When you die, a gravestone appears where you died. It holds your items, your XP, how you died and the last
-  thing you said in chat, shown as floating text above it.
+  thing you said in chat, shown as floating text above it. The grave is named after you and your death count
+  ("Steve, the Third").
 - Each life you choose **One Life** or not (asked when you first join and every time you respawn):
   - **One Life:** your grave is sealed forever. Anyone can look inside; nobody can take anything out.
   - **Not One Life:** anyone can loot the grave like a chest. Emptied, it stays as a memorial.

@@ -11,6 +11,7 @@ import net.dosaki.onelife.craft.GravePlacer;
 import net.dosaki.onelife.craft.ItemCodec;
 import net.dosaki.onelife.grave.GraveData;
 import net.dosaki.onelife.grave.GraveDataException;
+import net.dosaki.onelife.grave.GraveText;
 import net.dosaki.onelife.grave.SizeCap;
 import net.dosaki.onelife.mode.LastMessageTracker;
 import net.dosaki.onelife.mode.ModeState;
@@ -18,6 +19,8 @@ import net.dosaki.onelife.mode.PlayerModeStore;
 import net.dosaki.onelife.view.SlotLayout;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+import org.bukkit.Statistic;
 import org.bukkit.Tag;
 import org.bukkit.block.Block;
 import org.bukkit.damage.DamageType;
@@ -84,7 +87,8 @@ public final class DeathListener implements Listener {
             int xp = player.calculateTotalExperiencePoints();
             GraveData grave = new GraveData(UUID.randomUUID(), player.getUniqueId(), player.getName(),
                     state.graveMode(), causeJson(event, player), lastMessages.get(player), xp, false,
-                    ItemCodec.encode(stored));
+                    // Vanilla counts this death in the DEATHS statistic only after PlayerDeathEvent.
+                    player.getStatistic(Statistic.DEATHS) + 1, ItemCodec.encode(stored));
 
             spaces = GravePlacer.findSpaces(player.getLocation(), 1 + carried.size(), settings.searchRadius());
             yaw = player.getLocation().getYaw();
@@ -120,12 +124,12 @@ public final class DeathListener implements Listener {
         }
     }
 
+    /** The death message as plain English without the player's name; the serializer resolves vanilla keys. */
     private static String causeJson(PlayerDeathEvent event, Player player) {
         Component message = event.deathMessage();
-        if (message == null) {
-            message = Component.translatable("death.attack.generic", Component.text(player.getName()));
-        }
-        return GsonComponentSerializer.gson().serialize(message);
+        String plain = message == null ? null : PlainTextComponentSerializer.plainText().serialize(message);
+        String cause = GraveText.causeWithoutName(plain, player.getName());
+        return GsonComponentSerializer.gson().serialize(Component.text(cause));
     }
 
     private static @Nullable GraveData decodeOrNull(byte[] raw) {

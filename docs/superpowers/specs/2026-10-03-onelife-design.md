@@ -32,7 +32,7 @@ first time it is ever broken, whoever breaks it gets half of the stored XP.
 | Platform | Paper 26.3, Java 25, vanilla clients |
 | Custom content | [CraftEngine](https://modrinth.com/plugin/craftengine) **furniture** (not a custom block) |
 | Model | Simple JSON model made for this project (headstone on a base), 16×16 stone texture |
-| Resource pack | Built by CraftEngine, uploaded to S3, served via the map's CloudFront, **required** |
+| Resource pack | Built by CraftEngine and served by the server itself on the game port (§7), **required** |
 | Licence | GPL-3.0 (CraftEngine is GPL-3.0 and we link against its API) |
 | Build | Gradle (Kotlin DSL), JUnit 5, MockBukkit where it supports 26.3 |
 | Distribution | Jar attached to a GitHub Release, pinned by URL + sha256 in the server repo's `versions.json` |
@@ -221,12 +221,15 @@ fresh item built from the meta entity's current data.
 
 ## 7. Server integration (in `dosaki/minecraft-server`)
 
-The server repo will need its own short plan for:
+The server repo needs:
 
 - `versions.json`: pin CraftEngine and the `onelife` jar (release URL + sha256).
-- CraftEngine config: S3 upload of the generated pack to the map bucket under `resourcepack/`, pack sent on join and
-  required, kick message for declining.
-- Terraform: the instance role may write `resourcepack/*` in the map bucket; CloudFront serves that path.
+- CraftEngine config: the server serves the pack itself on the game port (`self` host, `port: auto`, URL
+  `http://<server DNS name>:25565/`); pack sent on join and required.
+
+S3 + CloudFront was the original plan, but CraftEngine 26.9's S3 host only accepts static access keys (not the EC2
+instance role), the map sync job deletes unknown keys in the map bucket, and CloudFront caching could serve a stale
+pack after a reboot. Self-hosting needs no keys, no Terraform and always serves the pack that matches its hash.
 
 ## 8. Testing
 

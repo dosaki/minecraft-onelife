@@ -9,6 +9,7 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.block.TileState;
 import org.bukkit.util.BoundingBox;
 import org.jspecify.annotations.Nullable;
 
@@ -24,10 +25,10 @@ public final class GravePlacer {
         FreeSpaceFinder.Space space = new FreeSpaceFinder.Space() {
             public boolean isFree(int x, int y, int z) { return isFreeBlock(world.getBlockAt(x, y, z)); }
             // The finder's upward fallback skips only "bedrock"; also skip blocks holding furniture so
-            // a fallback never replaces a block that already has a grave.
+            // a fallback never replaces a block that already has a grave or holds a container.
             public boolean isBedrock(int x, int y, int z) {
                 Block block = world.getBlockAt(x, y, z);
-                return block.getType() == Material.BEDROCK || hasFurniture(block);
+                return block.getType() == Material.BEDROCK || hasFurniture(block) || holdsTileEntity(block);
             }
             public int minY() { return world.getMinHeight(); }
             public int maxY() { return world.getMaxHeight(); }
@@ -44,10 +45,17 @@ public final class GravePlacer {
         return !hasFurniture(block);
     }
 
+    /** The furniture's meta entity is a zero-size point at the block floor, so expand the box to touch it. */
     private static boolean hasFurniture(Block block) {
         return !block.getWorld()
-                .getNearbyEntities(BoundingBox.of(block), CraftEngineFurniture::isFurniture)
+                .getNearbyEntities(BoundingBox.of(block).expand(0.01),
+                        e -> CraftEngineFurniture.isFurniture(e) && e.getLocation().getBlock().equals(block))
                 .isEmpty();
+    }
+
+    /** Chests, barrels, hoppers, signs and the like: replacing them would destroy contents. */
+    private static boolean holdsTileEntity(Block block) {
+        return block.getState(false) instanceof TileState;
     }
 
     /** Places a grave in {@code block}, replacing it if it isn't free. Null if CraftEngine refused. */

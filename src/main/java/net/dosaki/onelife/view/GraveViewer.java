@@ -68,7 +68,7 @@ public final class GraveViewer implements Listener {
     public void closeAll(UUID graveId) {
         Holder holder = open.remove(graveId);
         if (holder == null) return;
-        holder.flush();
+        if (!holder.flush()) plugin.getLogger().warning("Grave " + graveId + ": entity unresolved on closeAll, changes not saved");
         holder.retired = true;
         for (HumanEntity viewer : new ArrayList<>(holder.getInventory().getViewers())) viewer.closeInventory();
     }
@@ -85,6 +85,10 @@ public final class GraveViewer implements Listener {
             boolean allowed = ViewerPolicy.allowClick(holder.data.mode(), holder.readable, event.getAction(),
                     clickedTop, rawSlot, hotbarTargetEmpty(event));
             if (!allowed || wasCancelled) return;
+            if (!holder.entityResolves()) {
+                retire(holder, "grave entity is gone or unloaded, click refused");
+                return;
+            }
             event.setCancelled(false);
             if (clickedTop) Bukkit.getScheduler().runTask(plugin, () -> flush(holder));
         } catch (RuntimeException e) {
@@ -100,6 +104,10 @@ public final class GraveViewer implements Listener {
         event.setCancelled(true);
         try {
             if (!wasCancelled && ViewerPolicy.allowDrag(holder.data.mode(), holder.readable, event.getRawSlots())) {
+                if (!holder.entityResolves()) {
+                    retire(holder, "grave entity is gone or unloaded, drag refused");
+                    return;
+                }
                 event.setCancelled(false);
             }
         } catch (RuntimeException e) {

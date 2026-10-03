@@ -1,0 +1,33 @@
+items:
+  onelife:gravestone:
+    model: onelife:item/gravestone
+    data:
+      item_name: "<!i>Gravestone"
+      components:
+        minecraft:max_stack_size: 1
+    behavior:
+      type: furniture_item
+      rules:
+        ground:
+          rotation: four
+          alignment: center
+      furniture:
+        settings:
+          item: onelife:gravestone
+          hit_times: 3
+        variants:
+          ground:
+            elements:
+              - type: item_display
+                item: onelife:gravestone
+                display_transform: NONE
+                billboard: FIXED
+                translation: 0,0.5,0
+            hitboxes:
+              - type: shulker
+                position: 0,0,0
+                scale: 1
+                peek: 0
+                blocks_building: true
+                can_be_hit_by_projectile: false
+                interactive: true

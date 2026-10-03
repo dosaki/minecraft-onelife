@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.logging.Level;
 import net.dosaki.onelife.Settings;
 import net.dosaki.onelife.craft.GraveItems;
 import net.dosaki.onelife.craft.GravePlacer;
@@ -94,7 +95,7 @@ public final class DeathListener implements Listener {
             }
         } catch (RuntimeException e) {
             // Nothing has touched the event's drops or XP yet, so the vanilla death still happens.
-            plugin.getLogger().log(java.util.logging.Level.WARNING, "Could not build a grave for " + player.getName()
+            plugin.getLogger().log(Level.WARNING, "Could not build a grave for " + player.getName()
                     + " at " + player.getLocation() + "; leaving vanilla drops.", e);
             return;
         }
@@ -112,7 +113,7 @@ public final class DeathListener implements Listener {
                     event.getDrops().add(item);
                 }
             } catch (RuntimeException e) {
-                plugin.getLogger().log(java.util.logging.Level.WARNING,
+                plugin.getLogger().log(Level.WARNING,
                         "Could not re-place a carried gravestone; dropping it instead.", e);
                 event.getDrops().add(item);
             }

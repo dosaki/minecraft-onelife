@@ -52,7 +52,7 @@ first time it is ever broken, whoever breaks it gets half of the stored XP.
 
 ### 2.2 Death
 
-On a player death, unless the death was in the void or the `keep_inventory` gamerule is true:
+On every player death the One Life choice is cleared (§2.1). Then, unless the death was in the void or the `keep_inventory` gamerule is true:
 
 1. Take the drops vanilla is about to scatter (curse-of-vanishing items are already gone) and the player's
    **total** XP points (not vanilla's capped drop).
@@ -62,7 +62,6 @@ On a player death, unless the death was in the void or the `keep_inventory` game
    items, XP, `mined = false`, a new grave id.
 5. Clear vanilla's drops and dropped XP.
 6. Place the new grave at the nearest free space (§6.1), then each carried gravestone at the next nearest.
-7. Clear the player's One Life choice.
 
 Void deaths behave as vanilla (items lost to the void, no grave).
 

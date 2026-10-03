@@ -1,10 +1,12 @@
 package net.dosaki.onelife.craft;
 
 import java.util.List;
+import java.util.logging.Level;
 import net.dosaki.onelife.grave.FreeSpaceFinder;
 import net.dosaki.onelife.grave.GraveData;
 import net.momirealms.craftengine.bukkit.api.CraftEngineFurniture;
 import net.momirealms.craftengine.bukkit.entity.furniture.BukkitFurniture;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
@@ -66,7 +68,15 @@ public final class GravePlacer {
         BukkitFurniture furniture = CraftEngineFurniture.place(at, GraveItems.FURNITURE, VARIANT, false);
         if (furniture == null) return null;
         GraveStore.writeRaw(furniture.bukkitEntity(), raw);
-        if (data != null) GraveHolograms.spawn(furniture.location(), data);
+        if (data != null) {
+            // The grave exists now; its text is best-effort (HologramRestorer recreates it on chunk load).
+            try {
+                GraveHolograms.spawn(furniture.location(), data);
+            } catch (RuntimeException e) {
+                Bukkit.getLogger().log(Level.WARNING, "Placed a grave at " + furniture.location()
+                        + " but could not spawn its text.", e);
+            }
+        }
         return furniture;
     }
 }

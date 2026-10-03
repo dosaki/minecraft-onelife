@@ -20,6 +20,7 @@ import org.bukkit.Location;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
@@ -52,7 +53,7 @@ public final class GraveFurnitureListener implements Listener {
     }
 
     /** Moves the grave data from the placing item onto the furniture and shows the text. */
-    @EventHandler(ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onPlace(FurniturePlaceEvent event) {
         BukkitFurniture furniture = event.furniture();
         if (!GraveItems.FURNITURE.equals(furniture.id())) return;
@@ -77,12 +78,21 @@ public final class GraveFurnitureListener implements Listener {
         viewer.open(event.getPlayer(), furniture.bukkitEntity());
     }
 
-    /** Pays the first-break XP once, then drops our own item with the up-to-date data. */
+    /** We drop our own item (with the up-to-date data) instead of CraftEngine's. */
     @EventHandler(ignoreCancelled = true)
+    public void onBreakSuppressDrops(FurnitureBreakEvent event) {
+        if (!GraveItems.FURNITURE.equals(event.furniture().id())) return;
+        event.setDropItems(false);
+    }
+
+    /**
+     * Pays the first-break XP once, then drops our item. Runs at MONITOR so a later cancel by
+     * CraftEngine or another plugin can't leave both the furniture and a dropped copy.
+     */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onBreak(FurnitureBreakEvent event) {
         BukkitFurniture furniture = event.furniture();
         if (!GraveItems.FURNITURE.equals(furniture.id())) return;
-        event.setDropItems(false);
         Entity meta = furniture.bukkitEntity();
         Location drop = furniture.getDropLocation();
 
@@ -104,7 +114,8 @@ public final class GraveFurnitureListener implements Listener {
             GraveStore.write(meta, data);
             event.getPlayer().giveExp(payout);
         }
-        GraveHolograms.remove(furniture.location(), data.graveId());
+        // Drop first so a failing cleanup can't lose the grave.
         drop.getWorld().dropItemNaturally(drop, GraveItems.build(data.encode(), data));
+        GraveHolograms.remove(furniture.location(), data.graveId());
     }
 }

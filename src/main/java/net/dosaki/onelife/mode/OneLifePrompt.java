@@ -17,10 +17,10 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.player.PlayerResourcePackStatusEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.plugin.Plugin;
 
-/** Asks "One Life?" when a player first joins (after the resource pack loads) and on every respawn. */
+/** Asks "One Life?" when a player first joins and on every respawn. */
 public final class OneLifePrompt implements Listener {
 
     private final Plugin plugin;
@@ -29,10 +29,17 @@ public final class OneLifePrompt implements Listener {
         this.plugin = plugin;
     }
 
+    /**
+     * CraftEngine sends the pack during configuration and cancels the client's status packet, so no
+     * PlayerResourcePackStatusEvent fires; ask shortly after join instead.
+     */
     @EventHandler
-    public void onPackLoaded(PlayerResourcePackStatusEvent event) {
-        if (event.getStatus() != PlayerResourcePackStatusEvent.Status.SUCCESSFULLY_LOADED) return;
-        if (!PlayerModeStore.get(event.getPlayer()).chosen()) show(event.getPlayer());
+    public void onJoin(PlayerJoinEvent event) {
+        Player player = event.getPlayer();
+        if (PlayerModeStore.get(player).chosen()) return;
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (player.isOnline() && !PlayerModeStore.get(player).chosen()) show(player);
+        }, 20L);
     }
 
     @EventHandler
@@ -64,6 +71,8 @@ public final class OneLifePrompt implements Listener {
     private void choose(Audience audience, boolean oneLife) {
         if (!(audience instanceof Player player)) return;
         Bukkit.getScheduler().runTask(plugin, () -> {
+            // A stale click (dialog answered after dying or leaving) must not change the mode.
+            if (!player.isOnline() || player.isDead()) return;
             ModeState state = PlayerModeStore.get(player).choose(oneLife);
             PlayerModeStore.set(player, state);
             player.sendMessage(state.enabled()

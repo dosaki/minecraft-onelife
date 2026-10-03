@@ -73,6 +73,11 @@ public final class GraveViewer implements Listener {
         for (HumanEntity viewer : new ArrayList<>(holder.getInventory().getViewers())) viewer.closeInventory();
     }
 
+    /** Flushes and closes every open grave window (plugin shutdown). */
+    public void closeEverything() {
+        for (UUID graveId : new ArrayList<>(open.keySet())) closeAll(graveId);
+    }
+
     // Fail closed: cancel first, un-cancel only when the policy allows. An exception leaves the event cancelled.
     @EventHandler
     public void onClick(InventoryClickEvent event) {

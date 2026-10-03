@@ -82,7 +82,7 @@ Gravestones break after **3 hits** by anyone. On break:
 1. If `mined` is false: set `mined = true`, then give the breaker half the stored XP (rounded down).
 2. Close any open windows on this grave.
 3. Remove the floating text.
-4. Drop **our** gravestone item carrying the up-to-date grave data (CraftEngine's own drop is cancelled).
+4. Drop **our** gravestone item carrying the up-to-date grave data (CraftEngine's own drop is cancelled); if the grave stands in lava or water, the item goes straight into the breaker's inventory (overflow drops at their feet) so it can't burn or drift away.
 
 Explosions, fire and projectiles do not damage a placed gravestone.
 

@@ -93,29 +93,50 @@ public final class GraveFurnitureListener implements Listener {
     public void onBreak(FurnitureBreakEvent event) {
         BukkitFurniture furniture = event.furniture();
         if (!GraveItems.FURNITURE.equals(furniture.id())) return;
+        event.setDropItems(false); // a higher-priority plugin may have re-enabled CraftEngine's own drop
         Entity meta = furniture.bukkitEntity();
-        Location drop = furniture.getDropLocation();
 
-        Optional<byte[]> raw = GraveStore.raw(meta);
-        if (raw.isEmpty()) {
-            drop.getWorld().dropItemNaturally(drop, GraveItems.blank());
+        ItemStack item;
+        GraveData mined = null;
+        int payout = 0;
+        try {
+            Optional<byte[]> raw = GraveStore.raw(meta);
+            if (raw.isEmpty()) {
+                item = GraveItems.blank();
+            } else {
+                Optional<GraveData> before = GraveStore.read(meta, plugin.getLogger());
+                if (before.isEmpty()) {
+                    item = GraveItems.build(raw.get(), null);
+                } else {
+                    viewer.closeAll(before.get().graveId());
+                    GraveData data = GraveStore.read(meta, plugin.getLogger()).orElse(before.get());
+                    if (!data.mined()) {
+                        payout = data.payout(settings.xpFraction());
+                        data = data.withMined();
+                        GraveStore.write(meta, data);
+                    }
+                    mined = data;
+                    item = GraveItems.build(data.encode(), data);
+                }
+            }
+        } catch (RuntimeException e) {
+            // MONITOR: cancelling is still honoured by CraftEngine, which then keeps the furniture (and the grave).
+            event.setCancelled(true);
+            plugin.getLogger().warning("Could not break gravestone at " + furniture.location() + ": " + e);
             return;
         }
-        Optional<GraveData> before = GraveStore.read(meta, plugin.getLogger());
-        if (before.isEmpty()) {
-            drop.getWorld().dropItemNaturally(drop, GraveItems.build(raw.get(), null));
-            return;
+
+        if (payout > 0) event.getPlayer().giveExp(payout);
+        Location drop = furniture.getDropLocation();
+        if (furniture.location().getBlock().isLiquid()) {
+            // Dropped items burn in lava or drift away; hand the grave straight to the breaker.
+            Player player = event.getPlayer();
+            for (ItemStack left : player.getInventory().addItem(item).values()) {
+                player.getWorld().dropItemNaturally(player.getLocation(), left);
+            }
+        } else {
+            drop.getWorld().dropItemNaturally(drop, item);
         }
-        viewer.closeAll(before.get().graveId());
-        GraveData data = GraveStore.read(meta, plugin.getLogger()).orElse(before.get());
-        if (!data.mined()) {
-            int payout = data.payout(settings.xpFraction());
-            data = data.withMined();
-            GraveStore.write(meta, data);
-            event.getPlayer().giveExp(payout);
-        }
-        // Drop first so a failing cleanup can't lose the grave.
-        drop.getWorld().dropItemNaturally(drop, GraveItems.build(data.encode(), data));
-        GraveHolograms.remove(furniture.location(), data.graveId());
+        if (mined != null) GraveHolograms.remove(furniture.location(), mined.graveId());
     }
 }

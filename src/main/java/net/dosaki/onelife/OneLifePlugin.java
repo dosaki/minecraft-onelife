@@ -16,6 +16,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 public final class OneLifePlugin extends JavaPlugin {
 
     private Settings settings;
+    private GraveViewer viewer;
 
     @Override
     public void onEnable() {
@@ -30,7 +31,7 @@ public final class OneLifePlugin extends JavaPlugin {
         }
 
         LastMessageTracker lastMessages = new LastMessageTracker(this);
-        GraveViewer viewer = new GraveViewer(this);
+        viewer = new GraveViewer(this);
         register(lastMessages);
         register(viewer);
         register(new PackRegenerator(settings));
@@ -39,6 +40,11 @@ public final class OneLifePlugin extends JavaPlugin {
         register(new HologramRestorer(this));
         register(new OneLifePrompt(this));
         OneLifeCommand.register(this);
+    }
+
+    @Override
+    public void onDisable() {
+        if (viewer != null) viewer.closeEverything();
     }
 
     public Settings settings() {

@@ -18,6 +18,7 @@ public final class PackRegenerator implements Listener {
     @EventHandler
     public void onReload(CraftEngineReloadEvent event) {
         if (event.isFirstReload() && settings.regeneratePackOnStart()) {
+            Bukkit.getLogger().info("[OneLife] Regenerating the resource pack (ce reload pack)");
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "ce reload pack");
         }
     }

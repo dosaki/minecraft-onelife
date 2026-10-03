@@ -1,3 +1,5 @@
+# Do not add FURNITURE_BREAK or PLACE event functions here: the plugin pays XP and drops the item at
+# MONITOR priority and relies on nothing cancelling the break afterwards.
 items:
   onelife:gravestone:
     model: onelife:item/gravestone

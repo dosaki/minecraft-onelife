@@ -12,6 +12,7 @@ import net.dosaki.onelife.craft.GravePlacer;
 import net.dosaki.onelife.craft.ItemCodec;
 import net.dosaki.onelife.grave.GraveData;
 import net.dosaki.onelife.grave.GraveDataException;
+import net.dosaki.onelife.grave.DropMatcher;
 import net.dosaki.onelife.grave.GraveText;
 import net.dosaki.onelife.grave.SizeCap;
 import net.dosaki.onelife.mode.LastMessageTracker;
@@ -60,19 +61,44 @@ public final class DeathListener implements Listener {
 
         List<ItemStack> carried = new ArrayList<>();
         List<ItemStack> spill = new ArrayList<>();
+        List<ItemStack> leftovers = new ArrayList<>();
         List<Block> spaces;
         float yaw;
         try {
             ItemStack[] contents = player.getInventory().getContents();
-            ItemStack[] stored = ItemCodec.emptySlots();
-            for (int i = 0; i < Math.min(contents.length, SlotLayout.GRAVE_SLOTS); i++) {
+            int slotCount = Math.min(contents.length, SlotLayout.GRAVE_SLOTS);
+            // The event's drops are the source of truth: other listeners may have removed, kept or added items.
+            // Work on copies of their quantities; the event itself is untouched until the grave is placed.
+            List<ItemStack> drops = event.getDrops();
+            int[] dropLeft = new int[drops.size()];
+            for (int d = 0; d < dropLeft.length; d++) dropLeft[d] = drops.get(d).isEmpty() ? 0 : drops.get(d).getAmount();
+
+            List<ItemStack> slotItems = new ArrayList<>(slotCount);
+            int[] slotAmounts = new int[slotCount];
+            for (int i = 0; i < slotCount; i++) {
                 ItemStack item = contents[i];
-                if (item == null || item.isEmpty() || item.containsEnchantment(Enchantment.VANISHING_CURSE)) continue;
+                boolean skip = item == null || item.isEmpty() || item.containsEnchantment(Enchantment.VANISHING_CURSE);
+                slotItems.add(skip ? null : item);
+                slotAmounts[i] = skip ? 0 : item.getAmount();
+            }
+            int[] taken = DropMatcher.take(slotItems, slotAmounts, drops, dropLeft, ItemStack::isSimilar);
+
+            ItemStack[] stored = ItemCodec.emptySlots();
+            for (int i = 0; i < slotCount; i++) {
+                if (taken[i] <= 0) continue;
+                ItemStack item = slotItems.get(i).clone();
+                item.setAmount(taken[i]);
                 if (GraveItems.isGravestone(item)) {
-                    (GraveItems.rawData(item).isPresent() ? carried : spill).add(item.clone());
+                    (GraveItems.rawData(item).isPresent() ? carried : spill).add(item);
                     continue;
                 }
-                stored[i] = item.clone();
+                stored[i] = item;
+            }
+            for (int d = 0; d < dropLeft.length; d++) {
+                if (dropLeft[d] <= 0) continue;
+                ItemStack rest = drops.get(d).clone();
+                rest.setAmount(dropLeft[d]);
+                leftovers.add(rest);
             }
 
             List<SizeCap.Slot> sizes = new ArrayList<>();
@@ -93,7 +119,8 @@ public final class DeathListener implements Listener {
                 stored[i] = ItemStack.empty();
             }
 
-            int xp = player.calculateTotalExperiencePoints();
+            // With keepLevel the player keeps their levels; storing them too would duplicate XP.
+            int xp = event.getKeepLevel() ? 0 : player.calculateTotalExperiencePoints();
             GraveData grave = new GraveData(UUID.randomUUID(), player.getUniqueId(), player.getName(),
                     state.graveMode(), causeJson(event, player), lastMessages.get(player), xp, false,
                     // Vanilla counts this death in the DEATHS statistic only after PlayerDeathEvent.
@@ -115,6 +142,7 @@ public final class DeathListener implements Listener {
 
         event.getDrops().clear();
         event.setDroppedExp(0);
+        event.getDrops().addAll(leftovers);
         event.getDrops().addAll(spill);
 
         for (int j = 0; j < carried.size(); j++) {

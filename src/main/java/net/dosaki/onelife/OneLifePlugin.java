@@ -38,8 +38,8 @@ public final class OneLifePlugin extends JavaPlugin {
         register(new DeathListener(this, settings, lastMessages));
         register(new GraveFurnitureListener(this, settings, viewer));
         register(new HologramRestorer(this));
-        register(new OneLifePrompt(this));
-        OneLifeCommand.register(this);
+        register(new OneLifePrompt(this, settings));
+        OneLifeCommand.register(this, settings);
     }
 
     @Override

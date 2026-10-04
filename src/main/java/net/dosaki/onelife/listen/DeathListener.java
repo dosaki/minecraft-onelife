@@ -151,7 +151,7 @@ public final class DeathListener implements Listener {
             // With keepLevel the player keeps their levels; storing them too would duplicate XP.
             int xp = event.getKeepLevel() ? 0 : player.calculateTotalExperiencePoints();
             GraveData grave = new GraveData(UUID.randomUUID(), player.getUniqueId(), player.getName(),
-                    state.graveMode(), causeJson(event, player), lastMessages.get(player), xp, false,
+                    state.graveMode(settings.oneLifeRequired()), causeJson(event, player), lastMessages.get(player), xp, false,
                     // Vanilla counts this death in the DEATHS statistic only after PlayerDeathEvent.
                     player.getStatistic(Statistic.DEATHS) + 1, ItemCodec.encode(stored));
 

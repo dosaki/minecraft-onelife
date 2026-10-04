@@ -1,6 +1,7 @@
 package net.dosaki.onelife;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -16,6 +17,7 @@ class SettingsTest {
         assertEquals(3, s.searchRadius());
         assertEquals(0.5, s.xpFraction());
         assertTrue(s.regeneratePackOnStart());
+        assertFalse(s.oneLifeRequired());
     }
 
     @Test
@@ -25,8 +27,18 @@ class SettingsTest {
         c.set("search-radius", 5);
         c.set("xp-fraction", 0.25);
         c.set("regenerate-pack-on-start", false);
+        c.set("one-life.required", true);
         Settings s = Settings.from(c);
-        assertEquals(new Settings(1000, 5, 0.25, false), s);
+        assertEquals(new Settings(1000, 5, 0.25, false, true), s);
+    }
+
+    @Test
+    void rejectsNonBooleanRequired() {
+        YamlConfiguration c = new YamlConfiguration();
+        c.set("one-life.required", "yes please");
+        assertThrows(IllegalArgumentException.class, () -> Settings.from(c));
+        c.set("one-life.required", 1);
+        assertThrows(IllegalArgumentException.class, () -> Settings.from(c));
     }
 
     @Test

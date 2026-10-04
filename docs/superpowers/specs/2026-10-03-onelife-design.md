@@ -49,6 +49,9 @@ first time it is ever broken, whoever breaks it gets half of the stored XP.
 - `/onelife` shows the current mode. `/onelife on` turns it on at any time. There is no `off`: once on, only death
   turns it off.
 - Death clears the mode (back to "not chosen"), so the next respawn asks again.
+- With `one-life.required: true` (§5), none of the above applies: no dialog is shown, every grave is One Life
+  whatever the stored choice, and `/onelife` and `/onelife on` only reply "One Life is required on this server."
+  Stored choices are left alone, so setting it back to `false` resumes normal behaviour.
 
 ### 2.2 Death
 
@@ -183,6 +186,7 @@ fresh item built from the meta entity's current data.
 | `size-cap-bytes` | `524288` (512 KiB) | Max encoded size of a grave's items |
 | `search-radius` | `3` | How far to look for a free space |
 | `xp-fraction` | `0.5` | Share of stored XP given on the first break |
+| `one-life.required` | `false` | Every player is always One Life and is never asked (read at startup only) |
 
 ## 6. Edge cases and error handling
 

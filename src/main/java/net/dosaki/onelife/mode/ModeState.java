@@ -20,6 +20,11 @@ public record ModeState(boolean chosen, boolean enabled) {
     }
 
     public Mode graveMode() {
-        return enabled ? Mode.ONE_LIFE : Mode.LOOTABLE;
+        return graveMode(false);
+    }
+
+    /** The mode of the grave this death makes. When One Life is required, the stored choice is ignored. */
+    public Mode graveMode(boolean oneLifeRequired) {
+        return oneLifeRequired || enabled ? Mode.ONE_LIFE : Mode.LOOTABLE;
     }
 }

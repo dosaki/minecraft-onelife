@@ -27,6 +27,7 @@ A Paper plugin that replaces death drops with a gravestone.
 | `size-cap-bytes` | `524288` | Largest encoded size of a grave's items; over it, shulker boxes spill on the ground first |
 | `search-radius` | `3` | How far to look for a free space for a grave |
 | `xp-fraction` | `0.5` | Share of the stored XP given on the first break |
+| `one-life.required` | `false` | `true`: every player is always in One Life and is never asked (read at startup; stored choices are kept) |
 | `regenerate-pack-on-start` | `true` | Run `/ce reload pack` once after startup |
 
 ## Building

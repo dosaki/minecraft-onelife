@@ -13,6 +13,7 @@ import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickCallback;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.dosaki.onelife.Settings;
 import org.bukkit.Bukkit;
 import org.bukkit.Statistic;
 import org.bukkit.entity.Player;
@@ -25,9 +26,11 @@ import org.bukkit.plugin.Plugin;
 public final class OneLifePrompt implements Listener {
 
     private final Plugin plugin;
+    private final Settings settings;
 
-    public OneLifePrompt(Plugin plugin) {
+    public OneLifePrompt(Plugin plugin, Settings settings) {
         this.plugin = plugin;
+        this.settings = settings;
     }
 
     /**
@@ -36,6 +39,7 @@ public final class OneLifePrompt implements Listener {
      */
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
+        if (settings.oneLifeRequired()) return;
         Player player = event.getPlayer();
         if (PlayerModeStore.get(player).chosen()) return;
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
@@ -45,6 +49,7 @@ public final class OneLifePrompt implements Listener {
 
     @EventHandler
     public void onRespawn(PlayerPostRespawnEvent event) {
+        if (settings.oneLifeRequired()) return;
         show(event.getPlayer());
     }
 

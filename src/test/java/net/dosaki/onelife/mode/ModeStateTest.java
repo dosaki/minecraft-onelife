@@ -41,4 +41,17 @@ class ModeStateTest {
     void unchosenDiesLootable() {
         assertEquals(Mode.LOOTABLE, ModeState.UNCHOSEN.graveMode());
     }
+
+    @Test
+    void requiredMakesEveryGraveOneLife() {
+        assertEquals(Mode.ONE_LIFE, ModeState.UNCHOSEN.graveMode(true));
+        assertEquals(Mode.ONE_LIFE, ModeState.UNCHOSEN.choose(false).graveMode(true));
+        assertEquals(Mode.ONE_LIFE, ModeState.UNCHOSEN.turnOn().graveMode(true));
+    }
+
+    @Test
+    void notRequiredFollowsTheChoice() {
+        assertEquals(Mode.LOOTABLE, ModeState.UNCHOSEN.choose(false).graveMode(false));
+        assertEquals(Mode.ONE_LIFE, ModeState.UNCHOSEN.turnOn().graveMode(false));
+    }
 }

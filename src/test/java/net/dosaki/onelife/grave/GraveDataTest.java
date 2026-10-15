@@ -33,6 +33,13 @@ class GraveDataTest {
     }
 
     @Test
+    void withLastMessageChangesOnlyTheMessage() {
+        GraveData edited = sample("brb").withLastMessage("goodbye, world");
+        assertEquals(sample("goodbye, world"), edited);
+        assertEquals(edited, GraveData.decode(edited.encode()));
+    }
+
+    @Test
     void roundTripWithoutLastMessage() {
         GraveData decoded = GraveData.decode(sample(null).encode());
         assertNull(decoded.lastMessage());

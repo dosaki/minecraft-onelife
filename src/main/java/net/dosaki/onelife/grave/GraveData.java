@@ -56,6 +56,10 @@ public record GraveData(
         return new GraveData(graveId, ownerId, ownerName, mode, causeJson, lastMessage, xp, mined, deathNumber, newItems);
     }
 
+    public GraveData withLastMessage(@Nullable String newLastMessage) {
+        return new GraveData(graveId, ownerId, ownerName, mode, causeJson, newLastMessage, xp, mined, deathNumber, items);
+    }
+
     public GraveData withMined() {
         return new GraveData(graveId, ownerId, ownerName, mode, causeJson, lastMessage, xp, true, deathNumber, items);
     }

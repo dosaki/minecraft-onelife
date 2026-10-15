@@ -3,6 +3,10 @@ version: '${version}'
 main: net.dosaki.onelife.OneLifePlugin
 api-version: '26.3'
 description: One Life gravestones — memorial graves that hold your items, cause of death and last words.
+permissions:
+  onelife.lastwords:
+    description: Change the last words on a gravestone with /onelife lastwords
+    default: op
 dependencies:
   server:
     CraftEngine:

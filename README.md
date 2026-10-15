@@ -13,6 +13,9 @@ A Paper plugin that replaces death drops with a gravestone.
   time a grave is ever broken, whoever breaks it gets half the stored XP.
 - If a gravestone item burns or falls in lava, it's gone for good.
 - Void deaths and `keep_inventory` deaths don't make graves.
+- `/onelife lastwords <text>` changes the last words on the gravestone you're looking at (ops only, permission
+  `onelife.lastwords`). The new words go on the floating text and stay with the grave when it's broken and
+  placed again.
 
 ## Requirements
 

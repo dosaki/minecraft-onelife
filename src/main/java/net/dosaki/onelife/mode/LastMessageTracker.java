@@ -21,7 +21,7 @@ import org.jspecify.annotations.Nullable;
  */
 public final class LastMessageTracker implements Listener {
 
-    private static final int MAX_LENGTH = 256;
+    static final int MAX_LENGTH = 256;
 
     private final Plugin plugin;
     private final Map<UUID, String> recent = new ConcurrentHashMap<>();
